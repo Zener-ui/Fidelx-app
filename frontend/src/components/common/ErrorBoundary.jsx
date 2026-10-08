@@ -50,6 +50,8 @@ export default class ErrorBoundary extends Component {
             <p className="text-slate-muted text-sm max-w-xs">
               This page hit an unexpected error. You can try again, or head back and retry.
             </p>
+            {/* TEMP DIAGNOSTIC (remove later): reveal the real render error */}
+            <p className="text-xs break-words max-w-xs">{String(this.state.error?.stack || this.state.error).slice(0, 600)}</p>
           </div>
           <div className="flex gap-3">
             <Button onClick={this.handleReset} variant="outline" size="md">Try Again</Button>
