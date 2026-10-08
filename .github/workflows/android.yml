@@ -43,6 +43,7 @@ jobs:
         working-directory: frontend
         env:
           VITE_API_URL: https://fidelx-backend.onrender.com/api
+          VITE_APP_ROLE: customer
         run: npm run build
 
       - name: Add Android platform
