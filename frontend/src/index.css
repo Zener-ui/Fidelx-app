@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* ------------------------------------------------------------------
+     THEME VARIABLES
+     :root = the ORIGINAL look. Values are exactly the old hex tokens
+     (written as space-separated RGB so Tailwind opacity modifiers like
+     bg-teal/10 keep working). Vendor, rider, admin render from these.
+
+     [data-theme="pop"] = the redesign. Only elements inside a wrapper with
+     this attribute are affected (AppShell theme="pop", AuthLayout).
+     To roll the redesign back: remove the attribute. Nothing else changes.
+     ------------------------------------------------------------------ */
+  :root {
+    --c-accent: 223 80 12;        /* #DF500C */
+    --c-accent-dark: 184 66 10;   /* #B8420A */
+    --c-navy: 251 250 246;        /* #FBFAF6 */
+    --c-navy-mid: 243 240 233;    /* #F3F0E9 */
+    --c-navy-light: 237 232 220;  /* #EDE8DC */
+    --c-navy-border: 226 222 213; /* #E2DED5 */
+    --c-muted: 113 103 93;        /* #71675D */
+    --c-soft: 166 155 142;        /* #A69B8E */
+    --c-surface: 255 255 255;     /* #FFFFFF */
+    --c-line: 226 222 213;        /* #E2DED5 */
+    --c-ink: 34 24 17;            /* #221811 */
+    --font-sans: Geist, sans-serif;
+    --font-display: Newsreader, serif;
+  }
+
+  [data-theme="pop"] {
+    --c-accent: 255 107 26;       /* #FF6B1A  brand orange */
+    --c-accent-dark: 217 79 0;    /* #D94F00  deep orange */
+    --c-navy: 255 249 243;        /* #FFF9F3  paper (page background) */
+    --c-navy-mid: 255 240 227;    /* #FFF0E3  soft peach wash */
+    --c-navy-light: 255 226 203;  /* #FFE2CB  peach */
+    --c-navy-border: 232 211 192; /* #E8D3C0 */
+    --c-muted: 107 70 54;         /* #6B4636  muted brown */
+    --c-soft: 139 107 88;         /* #8B6B58  soft brown */
+    --c-surface: 255 255 255;
+    --c-line: 232 211 192;        /* soft divider, used for hairlines only */
+    --c-ink: 47 23 11;            /* #2F170B  ink: text AND outlines */
+    --font-sans: Figtree, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+    font-family: var(--font-sans);
+    color: rgb(var(--c-ink));
+  }
+
+  * { box-sizing: border-box; }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: #FBFAF6;
+    color: #221811;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+
+  /* Remove blue tap flash on mobile */
+  button, a { -webkit-tap-highlight-color: transparent; }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #E2DED5; border-radius: 2px; }
+
+  /* Safe area for PWA bottom nav */
+  .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Mapbox overrides */
+  .mapboxgl-ctrl-logo { display: none !important; }
+  .mapboxgl-ctrl-attrib { display: none !important; }
+}
+
+/* ----------------------------------------------------------------------
+   "pop" theme rules. Everything here is scoped to [data-theme="pop"].
+   Kept in the components layer so explicit pop: utilities can override.
+   ---------------------------------------------------------------------- */
+@layer components {
+  /* Accent used as TEXT needs the deeper orange to stay readable on light backgrounds */
+  [data-theme="pop"] .text-teal { color: #D94F00; }
+
+  /* Text that sits ON the orange accent is ink (as in the design), not cream */
+  [data-theme="pop"] .bg-teal.text-navy { color: rgb(var(--c-ink)); }
+
+  /* Display headings: heavy and tight */
+  [data-theme="pop"] .font-display { font-weight: 800; letter-spacing: -0.03em; }
+
+  /* Error/danger text: darker red-orange for contrast on cream */
+  [data-theme="pop"] .text-red-400,
+  [data-theme="pop"] .text-red-500 { color: #B83A00; }
+
+  /* Visible keyboard focus on interactive elements */
+  [data-theme="pop"] :is(a, button, [role="button"], summary):focus-visible {
+    outline: 3px solid rgb(var(--c-ink));
+    outline-offset: 3px;
+    border-radius: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="pop"] *,
+  [data-theme="pop"] *::before,
+  [data-theme="pop"] *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   Live rider tracking animation (RiderTrackingCard). Pure CSS so the
+   reduced-motion rule above switches it off.
+   ---------------------------------------------------------------------- */
+@keyframes fxRing { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(2.2); opacity: 0; } }
+@keyframes fxBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2.5px); } }
+.fx-ring { transform-box: fill-box; transform-origin: center; animation: fxRing 1.8s ease-out infinite; }
+.fx-bob { animation: fxBob .7s ease-in-out infinite; }
