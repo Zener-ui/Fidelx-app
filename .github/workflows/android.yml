@@ -37,7 +37,7 @@ jobs:
           packages: ""
 
       - name: Install dependencies
-        run: npm install
+        run: npm install typescript --save-dev
 
       - name: Build web app
         run: npm run build
