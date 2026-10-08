@@ -28,3 +28,31 @@ for spec in \
 done
 
 echo "Fidelx Android launcher icons prepared."
+
+# Capacitor's WebView-backed browser APIs need the corresponding Android
+# runtime permissions declared in the generated native app. These are
+# declared here because `npx cap add android` recreates the android/ folder
+# during the GitHub build.
+MANIFEST="frontend/android/app/src/main/AndroidManifest.xml"
+python3 - "$MANIFEST" <<'PYMANIFEST'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+s = path.read_text()
+permissions = [
+    'android.permission.ACCESS_COARSE_LOCATION',
+    'android.permission.ACCESS_FINE_LOCATION',
+    'android.permission.RECORD_AUDIO',
+    'android.permission.CAMERA',
+    'android.permission.POST_NOTIFICATIONS',
+]
+marker = '<uses-permission android:name="{}" />'
+for permission in permissions:
+    line = marker.format(permission)
+    if line not in s:
+        s = s.replace('<application', f'{line}\
+    <application', 1)
+path.write_text(s)
+print('Fidelx Android runtime permissions declared:', ', '.join(permissions))
+PYMANIFEST

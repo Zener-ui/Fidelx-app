@@ -64,14 +64,41 @@ app.use(requestId);
 app.use(logger);
 
 const allowedCorsOrigins = new Set(
-  [process.env.CLIENT_URL, "https://localhost", "capacitor://localhost"].filter(Boolean)
+  [
+    process.env.CLIENT_URL,
+    "https://localhost",
+    "http://localhost",
+    "capacitor://localhost",
+    "ionic://localhost",
+  ]
+    .filter(Boolean)
+    .map((value) => value.replace(/\/$/, ""))
 );
+
+const isAllowedCorsOrigin = (origin) => {
+  if (!origin) return true;
+  if (allowedCorsOrigins.has(origin.replace(/\/$/, ""))) return true;
+
+  // Capacitor/Android WebViews can use localhost with a dynamically assigned
+  // port depending on the native runtime. Keep this narrowly scoped to
+  // localhost instead of allowing arbitrary origins.
+  try {
+    const url = new URL(origin);
+    return (
+      ["http:", "https:", "capacitor:", "ionic:"].includes(url.protocol) &&
+      url.hostname === "localhost"
+    );
+  } catch {
+    return false;
+  }
+};
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedCorsOrigins.has(origin)) return callback(null, true);
-      return callback(new Error("Not allowed by CORS"));
+      // Never turn a CORS mismatch into an Express 500. Returning false lets
+      // the browser/WebView enforce CORS while keeping the API itself healthy.
+      return callback(null, isAllowedCorsOrigin(origin));
     },
     credentials: true,
   })
