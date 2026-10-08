@@ -9,10 +9,7 @@ on:
 jobs:
   android:
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: frontend
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -22,6 +19,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -36,17 +35,26 @@ jobs:
           log-accepted-android-sdk-licenses: false
           packages: ""
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
+        working-directory: frontend
         run: npm install typescript --save-dev
 
-      - name: Build web app
+      - name: Build Fidelx web app
+        working-directory: frontend
+        env:
+          VITE_API_URL: https://fidelx-backend.onrender.com/api
         run: npm run build
 
       - name: Add Android platform
+        working-directory: frontend
         run: npx cap add android
 
       - name: Sync Capacitor
+        working-directory: frontend
         run: npx cap sync android
+
+      - name: Apply Fidelx Android identity and icon
+        run: bash scripts/prepare-android.sh
 
       - name: Build debug APK
         working-directory: frontend/android
