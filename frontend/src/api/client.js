@@ -26,14 +26,7 @@ client.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const data = error.response?.data;
-    // ── TEMP DIAGNOSTIC (remove after Android login is diagnosed) ──
-    // When there is NO HTTP response (network/CORS/TLS/timeout), show the
-    // real Axios error instead of the generic text so the APK reveals it.
-    const diag = !error.response
-      ? ` [DIAG code=${error.code || "none"} msg=${error.message} url=${(error.config?.baseURL || "") + (error.config?.url || "")} origin=${window.location.origin}]`
-      : ` [DIAG status=${status} url=${(error.config?.baseURL || "") + (error.config?.url || "")}]`;
-    const message = (data?.message || "Something went wrong.") + diag;
-    // ── END TEMP DIAGNOSTIC ──
+    const message = data?.message || "Something went wrong.";
     const code = data?.code;
     const requestId = error.response?.headers?.["x-request-id"] || null;
     const requestUrl = error.config?.url || "";

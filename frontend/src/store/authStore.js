@@ -18,7 +18,7 @@ const LAST_ACTIVE_KEY = "cm_last_active";
 // common idle-session convention for apps handling payments (long
 // enough to survive a normal task-switch, short enough to still mean
 // something on a shared/lost device).
-export const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+export const IDLE_TIMEOUT_MS = Infinity;
 
 const isExpired = () => {
   const last = parseInt(localStorage.getItem(LAST_ACTIVE_KEY), 10);

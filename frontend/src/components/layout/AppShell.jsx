@@ -10,6 +10,7 @@ import UrgentNoticePopup from "@/components/common/UrgentNoticePopup";
 import { shouldShowWhatsAppChannelPrompt } from "@/utils/whatsapp";
 import Modal from "@/components/common/Modal";
 import { getActiveNotices } from "@/api/notifications";
+import { syncNativePushRegistration } from "@/utils/push";
 import { getUndismissedNotices, markNoticeDismissed } from "@/utils/urgentNotices";
 
 /**
@@ -60,6 +61,12 @@ export default function AppShell({ navItems, subtitle, contentMaxWidth = "max-w-
     markNoticeDismissed(user.id, current.id);
     setUrgentQueue(rest);
   };
+
+  // Native Android app: if notification permission is already granted, keep this
+  // device's FCM token registered for the logged-in user. No-op on the website.
+  useEffect(() => {
+    if (user?.id) syncNativePushRegistration();
+  }, [user?.id]);
 
   // First-run walkthrough — shown once per account, mounted here so
   // every role (customer/vendor/rider/admin) gets it automatically

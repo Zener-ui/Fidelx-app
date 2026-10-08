@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Bell, X } from "lucide-react";
 import { enablePushNotifications, isPushSupported, getPushPermissionState } from "@/utils/push";
@@ -16,6 +16,13 @@ export const hasSeenPushPrompt = (userId) => {
 // permanently denied permission at the browser level.
 export default function PushPermissionPrompt({ userId, onDone }) {
   const [loading, setLoading] = useState(false);
+  const [permissionState, setPermissionState] = useState("default");
+
+  useEffect(() => {
+    let active = true;
+    getPushPermissionState().then((state) => { if (active) setPermissionState(state); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const dismiss = () => {
     if (userId) localStorage.setItem(flagKey(userId), "seen");
@@ -47,7 +54,7 @@ export default function PushPermissionPrompt({ userId, onDone }) {
     }
   };
 
-  if (!isPushSupported() || getPushPermissionState() !== "default") return null;
+  if (!isPushSupported() || permissionState !== "prompt" && permissionState !== "default") return null;
 
   return (
     <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 z-50 bg-surface border border-surface-border rounded-2xl p-4 shadow-lg">

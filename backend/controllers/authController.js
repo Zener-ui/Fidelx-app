@@ -6,10 +6,10 @@ const { adminClient } = require("../config/db");
 const { sendPasswordResetEmail } = require("../utils/emailService");
 const totpService = require("../services/totpService");
 
-const generateToken = (id, authTokenVersion = 1) => {
-  return jwt.sign({ id, auth_token_version: authTokenVersion }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || "7d",
-  });
+const generateToken = (id, authTokenVersion = 1, persistent = false) => {
+  const payload = { id, auth_token_version: authTokenVersion };
+  const options = persistent ? {} : { expiresIn: process.env.JWT_EXPIRES_IN || "7d" };
+  return jwt.sign(payload, process.env.JWT_SECRET, options);
 };
 
 // Short-lived, single-purpose token issued after a correct password but
@@ -41,10 +41,15 @@ const normalizePhone = (raw) => {
 
 const normalizeEmail = (raw) => String(raw || "").trim().toLowerCase();
 
+const isNativeAppRequest = (req) => {
+  const origin = String(req.headers.origin || "").replace(/\/$/, "");
+  return ["https://localhost", "http://localhost", "capacitor://localhost", "ionic://localhost"].includes(origin);
+};
+
 // @route POST /api/auth/register
 const register = async (req, res) => {
   try {
-    const { email, phone, password, role, full_name, terms_accepted, referred_by_vendor_id, referred_by_customer_id } = req.body;
+    const { email, phone, password, role, full_name, terms_accepted, referred_by_vendor_id, referred_by_customer_id, persistent_session } = req.body;
 
     if (!email || !phone || !password || !role || !full_name) {
       return res.status(400).json({ success: false, message: "All fields are required." });
@@ -183,7 +188,7 @@ const register = async (req, res) => {
       console.error("Failed to record T&C acceptance for", user.id, acceptErr.message);
     }
 
-    const token = generateToken(user.id);
+    const token = generateToken(user.id, user.auth_token_version || 1, persistent_session === true && isNativeAppRequest(req));
     res.status(201).json({ success: true, token, user });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -211,7 +216,7 @@ const normalizePhoneVariants = (raw) => {
 
 const login = async (req, res) => {
   try {
-    const { identifier, password } = req.body;
+    const { identifier, password, persistent_session } = req.body;
 
     if (!identifier || !password) {
       return res.status(400).json({ success: false, message: "Email or phone number, and password, are required." });
@@ -272,7 +277,7 @@ const login = async (req, res) => {
       });
     }
 
-    const token = generateToken(user.id, user.auth_token_version || 1);
+    const token = generateToken(user.id, user.auth_token_version || 1, persistent_session === true && isNativeAppRequest(req));
     const { password_hash, totp_enabled, auth_token_version, ...safeUser } = user;
 
     res.json({ success: true, token, user: safeUser });

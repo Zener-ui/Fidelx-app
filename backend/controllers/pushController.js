@@ -111,4 +111,49 @@ const dispatchInternal = async (req, res) => {
   }
 };
 
-module.exports = { getVapidKey, subscribe, unsubscribe, dispatchInternal };
+// @route POST /api/push/fcm/register
+// Registers an Android FCM token for the authenticated user. The token is
+// device-scoped and intentionally separate from browser push subscriptions.
+const registerFcmToken = async (req, res) => {
+  try {
+    const { token, platform = "android", app_type = "customer" } = req.body || {};
+    if (!token || typeof token !== "string" || token.length > 4096) {
+      return res.status(400).json({ success: false, message: "Invalid FCM token." });
+    }
+    if (platform !== "android") {
+      return res.status(400).json({ success: false, message: "Unsupported push platform." });
+    }
+    if (!["customer", "vendor", "rider"].includes(app_type)) {
+      return res.status(400).json({ success: false, message: "Unsupported Fidelx app type." });
+    }
+    const { error } = await adminClient
+      .from("fcm_device_tokens")
+      .upsert(
+        { user_id: req.user.id, token, platform, app_type, active: true, updated_at: new Date().toISOString() },
+        { onConflict: "token" }
+      );
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @route POST /api/push/fcm/unregister
+const unregisterFcmToken = async (req, res) => {
+  try {
+    const { token } = req.body || {};
+    if (!token) return res.status(400).json({ success: false, message: "token is required." });
+    const { error } = await adminClient
+      .from("fcm_device_tokens")
+      .delete()
+      .eq("token", token)
+      .eq("user_id", req.user.id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { getVapidKey, subscribe, unsubscribe, dispatchInternal, registerFcmToken, unregisterFcmToken };

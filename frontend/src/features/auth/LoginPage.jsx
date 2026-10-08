@@ -8,11 +8,13 @@ import { roleHomePath } from "@/utils";
 import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import AuthTabs from "./AuthTabs";
+import { Capacitor } from "@capacitor/core";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login: storeLogin } = useAuthStore();
+  const { login: storeLogin, logout } = useAuthStore();
+  const nativeAppRole = Capacitor.isNativePlatform() ? (import.meta.env.VITE_APP_ROLE || "customer") : null;
 
   const [form, setForm] = useState({ identifier: "", password: "" });
   const [errors, setErrors] = useState({});
@@ -26,8 +28,13 @@ export default function LoginPage() {
   };
 
   const mutation = useMutation({
-    mutationFn: login,
+    mutationFn: (payload) => login({ ...payload, persistent_session: Boolean(nativeAppRole) }),
     onSuccess: (data) => {
+      if (nativeAppRole && data.user?.role !== nativeAppRole) {
+        logout();
+        toast.error(`This app is for ${nativeAppRole}s. Please use the correct Fidelx app for your account.`);
+        return;
+      }
       storeLogin(data.token, data.user);
       toast.success(`Welcome back, ${data.user.full_name.split(" ")[0]}!`);
       const from = location.state?.from?.pathname || roleHomePath(data.user.role);

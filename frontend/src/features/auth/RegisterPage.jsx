@@ -16,6 +16,7 @@ import Input from "@/components/common/Input";
 import GpsLocationCapture from "@/components/common/GpsLocationCapture";
 import { Check } from "lucide-react";
 import AuthTabs from "./AuthTabs";
+import { Capacitor } from "@capacitor/core";
 
 const ROLES = [
   { value: "customer", label: "Customer", desc: "Browse and shop" },
@@ -51,7 +52,10 @@ export default function RegisterPage() {
   }, [searchParams]);
   const { login: storeLogin } = useAuthStore();
 
-  const [form, setForm] = useState(BLANK_FORM);
+  const customerApp = Capacitor.isNativePlatform() && (import.meta.env.VITE_APP_ROLE || "customer") === "customer";
+  const requestedRole = searchParams.get("role");
+  const initialRole = customerApp ? "customer" : (requestedRole && ["customer", "vendor", "rider"].includes(requestedRole) ? requestedRole : "customer");
+  const [form, setForm] = useState({ ...BLANK_FORM, role: initialRole });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -140,7 +144,11 @@ export default function RegisterPage() {
       if (referredCustomerId) basePayload.referred_by_customer_id = referredCustomerId;
 
       // Step 1: create the account (same for every role)
+      basePayload.persistent_session = Capacitor.isNativePlatform();
       const accountData = await registerMutation.mutateAsync(basePayload);
+      if (customerApp && !["customer", "vendor", "rider"].includes(accountData.user?.role)) {
+        throw new Error("Invalid account role.");
+      }
       storeLogin(accountData.token, accountData.user); // writes the token so step 2 is authenticated
 
       // Step 2: role-specific profile, using the now-existing account.
@@ -217,27 +225,35 @@ export default function RegisterPage() {
       <p className="mb-6 mt-2 font-medium text-slate-muted">Join Fidelx today</p>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Role selector */}
-        <div>
-          <span id="role-label" className="mb-2 block text-sm font-bold text-ink">I want to</span>
-          <div role="radiogroup" aria-labelledby="role-label" className="grid grid-cols-3 gap-2.5">
-            {ROLES.map(({ value, label, desc }) => (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={form.role === value}
-                onClick={() => selectRole(value)}
-                className={`flex flex-col items-center rounded-2xl border-[2.5px] border-ink px-2 py-3 text-center shadow-pop-xs transition-all duration-150 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none ${
-                  form.role === value ? "bg-ink text-white" : "bg-white text-ink"
-                }`}
-              >
-                <span className="text-sm font-extrabold">{label}</span>
-                <span className="mt-0.5 text-[10px] font-semibold leading-tight opacity-80">{desc}</span>
-              </button>
-            ))}
+        {/* Customer Android app is strictly customer-only. Vendor/rider
+            registration remains available in their dedicated apps/web flow. */}
+        {customerApp ? (
+          <div className="rounded-[22px] border-[2.5px] border-ink bg-white p-4 shadow-pop-xs">
+            <p className="text-sm font-extrabold text-ink">Creating a customer account</p>
+            <p className="mt-1 text-xs font-semibold text-slate-muted">Shop from local businesses with Fidelx.</p>
           </div>
-        </div>
+        ) : (
+          <div>
+            <span id="role-label" className="mb-2 block text-sm font-bold text-ink">I want to</span>
+            <div role="radiogroup" aria-labelledby="role-label" className="grid grid-cols-3 gap-2.5">
+              {ROLES.map(({ value, label, desc }) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={form.role === value}
+                  onClick={() => selectRole(value)}
+                  className={`flex flex-col items-center rounded-2xl border-[2.5px] border-ink px-2 py-3 text-center shadow-pop-xs transition-all duration-150 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none ${
+                    form.role === value ? "bg-ink text-white" : "bg-white text-ink"
+                  }`}
+                >
+                  <span className="text-sm font-extrabold">{label}</span>
+                  <span className="mt-0.5 text-[10px] font-semibold leading-tight opacity-80">{desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Fields common to every role */}
         <Input
