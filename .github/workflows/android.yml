@@ -54,7 +54,8 @@ jobs:
         run: npx cap sync android
 
       - name: Apply Fidelx Android identity and icon
-        run: bash scripts/prepare-android.sh
+        working-directory: .
+        run: bash ./scripts/prepare-android.sh
 
       - name: Build debug APK
         working-directory: frontend/android

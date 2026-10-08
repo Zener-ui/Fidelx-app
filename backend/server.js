@@ -63,9 +63,16 @@ app.use(helmetMiddleware);
 app.use(requestId);
 app.use(logger);
 
+const allowedCorsOrigins = new Set(
+  [process.env.CLIENT_URL, "https://localhost", "capacitor://localhost"].filter(Boolean)
+);
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: (origin, callback) => {
+      if (!origin || allowedCorsOrigins.has(origin)) return callback(null, true);
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
