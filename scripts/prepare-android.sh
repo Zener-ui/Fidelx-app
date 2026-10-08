@@ -21,11 +21,10 @@ for spec in \
   "xxhdpi:144" \
   "xxxhdpi:192"; do
   density="${spec%%:*}"
-  size="${spec##*:}"
-  convert "$ICON" -resize "${size}x${size}" \
-    "$RES_DIR/mipmap-$density/ic_launcher.png"
-  cp "$RES_DIR/mipmap-$density/ic_launcher.png" \
-     "$RES_DIR/mipmap-$density/ic_launcher_round.png"
+  # Keep the source PNG intact and let Android scale it for each density.
+  # This avoids requiring ImageMagick/ImageMagick `convert` on the GitHub runner.
+  cp "$ICON" "$RES_DIR/mipmap-$density/ic_launcher.png"
+  cp "$ICON" "$RES_DIR/mipmap-$density/ic_launcher_round.png"
 done
 
 echo "Fidelx Android launcher icons prepared."
