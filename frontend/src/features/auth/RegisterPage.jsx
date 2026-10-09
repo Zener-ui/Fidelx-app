@@ -85,6 +85,7 @@ export default function RegisterPage() {
   // switch can never accidentally submit incompatible leftover data
   // from a previously-selected role.
   const selectRole = (role) => {
+    if (customerApp) return; // customer app: role is fixed
     setForm((f) => ({ ...BLANK_FORM, full_name: f.full_name, email: f.email, phone: f.phone, password: f.password, role }));
     setErrors({});
   };
@@ -128,7 +129,8 @@ export default function RegisterPage() {
         email: form.email,
         phone: form.phone,
         password: form.password,
-        role: form.role,
+        // Customer Android app can only ever create customer accounts.
+        role: customerApp ? "customer" : form.role,
         terms_accepted: termsAccepted,
       };
       if (needsInvite) basePayload.invite_code = form.invite_code;
@@ -146,7 +148,7 @@ export default function RegisterPage() {
       // Step 1: create the account (same for every role)
       basePayload.persistent_session = Capacitor.isNativePlatform();
       const accountData = await registerMutation.mutateAsync(basePayload);
-      if (customerApp && !["customer", "vendor", "rider"].includes(accountData.user?.role)) {
+      if (customerApp && accountData.user?.role !== "customer") {
         throw new Error("Invalid account role.");
       }
       storeLogin(accountData.token, accountData.user); // writes the token so step 2 is authenticated
@@ -155,7 +157,7 @@ export default function RegisterPage() {
       // Both of these are the exact same endpoints the dedicated
       // vendor/rider onboarding pages already use — nothing new here,
       // just called immediately instead of on a separate later visit.
-      if (form.role === "vendor") {
+      if (!customerApp && form.role === "vendor") {
         try {
           await registerVendor({
             business_name: form.business_name,
@@ -176,7 +178,7 @@ export default function RegisterPage() {
         }
       }
 
-      if (form.role === "rider") {
+      if (!customerApp && form.role === "rider") {
         try {
           const riderResult = await registerRider({
             nin: form.nin,
@@ -209,7 +211,7 @@ export default function RegisterPage() {
       clearReferredVendor();
       clearReferredCustomer();
       const from = location.state?.from?.pathname;
-      navigate(from || roleHomePath(form.role), { replace: true });
+      navigate(from || roleHomePath(customerApp ? "customer" : form.role), { replace: true });
     } catch (err) {
       // Base account creation itself failed — already toasted by registerMutation.onError
     } finally {

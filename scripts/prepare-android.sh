@@ -89,3 +89,54 @@ for permission in permissions:
 path.write_text(s)
 print('Fidelx Android runtime permissions declared:', ', '.join(permissions))
 PYMANIFEST
+
+# ---------------------------------------------------------------------------
+# Release signing + version code.
+#
+# `npx cap add android` regenerates the android/ folder on every CI run, so
+# signing has to be injected here. Without a permanent keystore, every build
+# is signed with a fresh debug key: Android then flags the APK as unknown and
+# refuses to install it over the previous version.
+#
+# Only active when the workflow provides FIDELX_KEYSTORE_PATH (decoded from the
+# FIDELX_KEYSTORE_BASE64 GitHub secret). With no secrets, nothing changes and
+# the workflow falls back to the debug build.
+# ---------------------------------------------------------------------------
+if [[ -n "${FIDELX_KEYSTORE_PATH:-}" && -f "$APP_GRADLE" ]]; then
+  python3 - "$APP_GRADLE" <<'PYSIGN'
+from pathlib import Path
+import os, re, sys
+
+p = Path(sys.argv[1])
+s = p.read_text()
+
+if "signingConfigs.release" not in s:
+    block = (
+        "    signingConfigs {\n"
+        "        release {\n"
+        "            storeFile file(System.getenv('FIDELX_KEYSTORE_PATH'))\n"
+        "            storePassword System.getenv('FIDELX_KEYSTORE_PASSWORD')\n"
+        "            keyAlias System.getenv('FIDELX_KEY_ALIAS')\n"
+        "            keyPassword System.getenv('FIDELX_KEY_PASSWORD')\n"
+        "        }\n"
+        "    }\n"
+    )
+    i = s.find("buildTypes {")
+    if i == -1:
+        raise SystemExit("buildTypes block not found in app/build.gradle")
+    s = s[:i] + block + "    " + s[i:]
+    j = s.find("release {", s.find("buildTypes {"))
+    if j == -1:
+        raise SystemExit("release build type not found in app/build.gradle")
+    k = s.find("{", j) + 1
+    s = s[:k] + "\n            signingConfig signingConfigs.release" + s[k:]
+
+code = os.environ.get("FIDELX_VERSION_CODE", "").strip()
+if code.isdigit():
+    s, n = re.subn(r"versionCode\s+\d+", "versionCode " + code, s, count=1)
+    print("versionCode set to", code if n else "(not found, unchanged)")
+
+p.write_text(s)
+print("Release signing configured for the Fidelx Android build.")
+PYSIGN
+fi
